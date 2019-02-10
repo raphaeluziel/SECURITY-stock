@@ -18,11 +18,12 @@ suite('Functional Tests', function() {
     suite('GET /api/stock-prices => stockData object', function() {
       
       test('1 stock', function(done) {
+        
        chai.request(server)
         .get('/api/stock-prices')
-        .query({stock: 'goog'})
+        .query({stock: 'NFLX'})
         .end(function(err, res){
-          
+          assert.equal(res.status, 200);
           //complete this one too
           
           done();
@@ -30,19 +31,19 @@ suite('Functional Tests', function() {
       });
       
       test('1 stock with like', function(done) {
-        
+        assert.fail();
       });
       
       test('1 stock with like again (ensure likes arent double counted)', function(done) {
-        
+        assert.fail();
       });
       
       test('2 stocks', function(done) {
-        
+        assert.fail();
       });
       
       test('2 stocks with like', function(done) {
-        
+        assert.fail();
       });
       
     });
