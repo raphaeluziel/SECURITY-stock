@@ -25,7 +25,7 @@ var Schema = mongoose.Schema;
 var stockSchema = new Schema({
   stock: {type: String, required: true},
   likes: Number,
-  ip: {type: String, required: true}
+  ip: [{type: String, required: true}]
 });
 
 var stockModel = mongoose.model('stockModel', stockSchema);
@@ -35,9 +35,8 @@ module.exports = function (app) {
   var ipAddress;
 
   app.use(function(req, res, next){
-    app.set('trust proxy',true);
+    app.set('trust proxy', true);
     ipAddress = req.ip;
-    console.log("IP: ", ipAddress);
     next();
   });
   
@@ -45,20 +44,40 @@ module.exports = function (app) {
   app.route('/api/stock-prices')
     .get(function (req, res){
     
+    console.log(req.query);
+    
       app.set('trust proxy',true);
-
-      console.log(req.query);
     
-      var newStock = new stockModel({
-        stock: req.query.stock,
-        likes: 0,
-        ip: ipAddress
-      })
+      var like = 0;
+      var likeCount;
+      var stock = req.query.stock.toUpperCase();
+      if (req.query.like == 'true') { like = 1; } else { like = 0; }
       
-      newStock.save(function(err, data){
-        console.log("SAVED NEW STOCK");
+      stockModel.findOne({stock: stock}, function(err, data){
+        if(err) { return console.log('error accessing database'); }
+        if(data) {
+          if (req.query.like == 'true') { like = 1; } else { like = 0; }
+          if (data.ip.indexOf(ipAddress) === -1){
+            data.ip.push(ipAddress);
+            data.likes += like;     
+          }
+          data.save(function(err, data){
+            likeCount = data.likes;
+          });
+        }
+        if(!data) {
+          var newStock = new stockModel({
+            stock: stock,
+            likes: like,
+            ip: ipAddress
+          })
+          newStock.save(function(err, data){
+            likeCount = data.likes;
+          });  
+        }
+
       });
-    
+
       var link = 'https://api.iextrading.com/1.0/stock/' + req.query.stock + '/price';
     
       var options = {
@@ -71,7 +90,7 @@ module.exports = function (app) {
 
       rp(options)
         .then(function (price) {
-            res.json({stockData: {stock: req.query.stock.toUpperCase(), price: price, likes: 0}});
+            res.json({stockData: {stock: req.query.stock.toUpperCase(), price: price, likes: likeCount}});
           })
         .catch(function (err) {
         // API call failed...
