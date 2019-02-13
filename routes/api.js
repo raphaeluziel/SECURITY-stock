@@ -59,8 +59,6 @@ module.exports = function (app) {
       else{
         stock[0] = req.query.stock.toUpperCase();
       }
-    
-      //console.log(stock[0], stock[1]);
 
       if (req.query.like == 'true') { like = 1; } else { like = 0; }
       
@@ -92,14 +90,13 @@ module.exports = function (app) {
       var link = ['https://api.iextrading.com/1.0/stock/' + stock[0] + '/price', 
                   'https://api.iextrading.com/1.0/stock/' + stock[1] + '/price']
     
-      var stockData = [{stock: stock[0], price: 0, likes: 0}, {stock: stock[1], price: 0, likes: 0}]; console.log(stockData);
+      var stockData = [{stock: stock[0], price: 0, likes: 0}, {stock: stock[1], price: 0, likes: 0}];
         
         var options = {uri: link[0], headers: { 'User-Agent': 'Request-Promise' }, json: true };
         
         rp(options).then(function (price) { 
           stockData[0].price = price;
-          
-          console.log("STOCK!: ", stockData[1].stock);
+
           if(!stockData[1].stock){
             return res.json({stockData: {stock: stockData[0].stock, price: stockData[0].price, likes: stockData[0].likes}});
           }
@@ -109,13 +106,10 @@ module.exports = function (app) {
           rp(options).then(function (price) { 
             
             stockData[1].price = price;
-            return res.json({stockData: stockData});
-            
+            return res.json({stockData: stockData}); 
             
           }).catch(function (err) { res.send('stock does not exist'); });
         }).catch(function (err) { res.send('stock does not exist'); });
-    
-        
     
     });
     
