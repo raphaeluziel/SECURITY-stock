@@ -1,11 +1,3 @@
-/*
-*
-*
-*       Complete the API routing below
-*
-*
-*/
-
 'use strict';
 
 var expect = require('chai').expect;
@@ -15,9 +7,6 @@ const request = require('request');
 var rp = require('request-promise');
 var mongoose = require('mongoose');
 
-//const CONNECTION_STRING = process.env.DB; 
-//MongoClient.connect(CONNECTION_STRING, function(err, db) {});
-
 mongoose.connect(process.env.DB, { useNewUrlParser: true });
 
 var Schema = mongoose.Schema;
@@ -25,6 +14,7 @@ var Schema = mongoose.Schema;
 var stockSchema = new Schema({
   stock: {type: String, required: true},
   likes: Number,
+  price: Number,
   ip: [{type: String, required: true}]
 });
 
@@ -43,98 +33,121 @@ module.exports = function (app) {
   
   app.route('/api/stock-prices')
     .get(function (req, res){
-    console.log(req.query);
+
 
       app.set('trust proxy',true);
-      
-      var stock = [];
+           
       var like = 0;
       var likeCount;
+      var stockData = [];
+      var stockQuery = [];
         
       if(Array.isArray(req.query.stock)){
-        stock[0] = req.query.stock[0].toUpperCase();
-        stock[1] = req.query.stock[1].toUpperCase();
+        stockQuery[0] = req.query.stock[0].toUpperCase();
+        stockQuery[1] = req.query.stock[1].toUpperCase();
       }
       else{
-        stock[0] = req.query.stock.toUpperCase();
+        stockQuery[0] = req.query.stock.toUpperCase();
       }
     
     
-    
-    
-      var link = ['https://api.iextrading.com/1.0/stock/' + stock[0] + '/price', 
-                  'https://api.iextrading.com/1.0/stock/' + stock[1] + '/price']
-    
-      var stockData = [{stock: stock[0], price: 0, likes: 0}, {stock: stock[1], price: 0, likes: 0}];
-        
-        var options = {uri: link[0], headers: { 'User-Agent': 'Request-Promise' }, json: true };
-        
-        rp(options).then(function (price) { 
-          stockData[0].price = price;
-
-          if(!stockData[1].stock){
-            return res.json({stockData: {stock: stockData[0].stock, price: stockData[0].price, likes: stockData[0].likes}});
-          }
-          
-          options = {uri: link[1], headers: { 'User-Agent': 'Request-Promise' }, json: true };
-        
-          rp(options).then(function (price) { 
-            
-            stockData[1].price = price;
-            return res.json({stockData: stockData}); 
-            
-          }).catch(function (err) { res.send('stock does not exist'); });
-        }).catch(function (err) { res.send('stock does not exist'); });
-    
-    
-    
-    
-    
-    
-
-      if (req.query.like == 'true') { like = 1; } else { like = 0; }
-    
-    
-
-    console.log(stock);  
-    stock.forEach(function(x){
+    function updateDatabase(x, price){
       stockModel.findOne({stock: x}, function(err, data){
-        console.log(data);
-        console.log(stock);
-        if(err) { return console.log('error accessing database'); }
-        if(data) {
-          if (req.query.like == 'true') { like = 1; } else { like = 0; }
-          if (data.ip.indexOf(ipAddress) === -1){
-            data.ip.push(ipAddress);
-            data.likes += like;     
-          }
-          data.save(function(err, data){
-            console.log("Updated stock");
-            likeCount = data.likes;
+            if(err) { return console.log('error accessing database'); }
+            if (req.query.like == 'true') { like = 1; } else { like = 0; }
+            if(data) {
+              
+              if (data.ip.indexOf(ipAddress) === -1){
+                  data.ip.push(ipAddress);
+                  data.likes += like;
+                  data.price = price;
+              }
+              data.save(function(err, data){
+                console.log("UPDATED");
+              });
+            }
+            if(!data) {
+              var newStock = new stockModel({
+                stock: x,
+                likes: like,
+                ip: ipAddress,
+                price: price
+              })
+              newStock.save(function(err, data){
+                console.log("SAVED NEW");
+              });  
+            }
+          }); 
+    }
+    
+    
+    var getPrices = [];
+    
+    stockQuery.forEach(function(x, i){
+      getPrices[i] = new Promise((resolve, reject) => {
+
+        var link = 'https://api.iextrading.com/1.0/stock/' + stockQuery[i] + '/price';
+        var options = {uri: link, headers: { 'User-Agent': 'Request-Promise' }, json: true }; 
+        var likes;
+
+        rp(options).then(function (price) { 
+          
+          
+          stockModel.findOne({stock: x},  function(err, data){
+            
+            if(!data){
+              updateDatabase(stockQuery[i], price);
+              if (req.query.like == 'true') { like = 1; } else { like = 0; }
+              stockData.push({stock: x, price: price, likes: like});
+              resolve({stock: x, price: price, likes: like}); 
+            }
+            
+            else{
+              updateDatabase(stockQuery[i], price);
+              likes = data.likes;
+              stockData.push({stock: x, price: price, likes: likes});
+              resolve({stock: x, price: price, likes: likes});
+            }
           });
-        }
-        if(!data) {
-          var newStock = new stockModel({
-            stock: x,
-            likes: like,
-            ip: ipAddress
-          })
-          newStock.save(function(err, data){
-            console.log("saved new stock");
-            likeCount = like;
-          });  
-        }
-
+          
+          
+          
+        })
+        
+        
+        
       });
-       
-
-    })
-    
-    
-    
-    
-    
-    
     });
     
+    
+    
+    
+    
+    
+    Promise.all([getPrices[0], getPrices[1]]).then(values => { 
+      
+
+      
+      if(stockData[1]) {
+        
+        console.log("A", stockData);
+        var rel_likes = [stockData[0].likes - stockData[1].likes, stockData[1].likes - stockData[0].likes];
+        
+        stockData.forEach(function(x, i){
+          x.rel_likes = rel_likes[i];
+          delete x.likes;
+        })
+        
+        console.log("B", stockData);
+        
+        res.json({stockData: stockData});
+      
+      }
+      else {res.json({stockData: stockData[0]});}
+      
+      
+    });
+  
+  
+  });    
 };

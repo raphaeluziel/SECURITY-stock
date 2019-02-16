@@ -17,8 +17,8 @@
     "zombie": "^6.1.4",
     "helmet": "^3.15.1",
     "request": "^2.88.0",
-    "request-promise": "^4.2.2",
-    "mongoose": "^5.4.11"
+    "request-promise": "^4.2.4",
+    "mongoose": "^5.4.12"
   },
   "engines": {
     "node": "10"
