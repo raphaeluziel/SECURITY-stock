@@ -95,19 +95,25 @@ module.exports = function (app) {
           
           stockModel.findOne({stock: x},  function(err, data){
             
+            
+            
             if(!data){
               updateDatabase(stockQuery[i], price);
-              if (req.query.like == 'true') { like = 1; } else { like = 0; }
-              stockData.push({stock: x, price: price, likes: like});
-              resolve({stock: x, price: price, likes: like}); 
+              if (req.query.like == 'true') { likes = 1; } else { likes = 0; }
+              stockData.push({stock: x, price: price, likes: likes});
+              resolve({stock: x, price: price, likes: likes});
             }
             
             else{
               updateDatabase(stockQuery[i], price);
-              likes = data.likes;
+              likes = data.likes;  
               stockData.push({stock: x, price: price, likes: likes});
               resolve({stock: x, price: price, likes: likes});
             }
+            
+            
+            
+            
           });
           
           
@@ -130,15 +136,12 @@ module.exports = function (app) {
       
       if(stockData[1]) {
         
-        console.log("A", stockData);
         var rel_likes = [stockData[0].likes - stockData[1].likes, stockData[1].likes - stockData[0].likes];
         
         stockData.forEach(function(x, i){
           x.rel_likes = rel_likes[i];
           delete x.likes;
         })
-        
-        console.log("B", stockData);
         
         res.json({stockData: stockData});
       
