@@ -110,30 +110,15 @@ module.exports = function (app) {
               stockData.push({stock: x, price: price, likes: likes});
               resolve({stock: x, price: price, likes: likes});
             }
-            
-            
-            
-            
-          });
-          
-          
-          
+     
+          });         
         })
-        
-        
-        
       });
     });
     
-    
-    
-    
-    
-    
-    Promise.all([getPrices[0], getPrices[1]]).then(values => { 
-      
 
-      
+    Promise.all([getPrices[0], getPrices[1]]).then(values => { 
+
       if(stockData[1]) {
         
         var rel_likes = [stockData[0].likes - stockData[1].likes, stockData[1].likes - stockData[0].likes];
@@ -147,10 +132,8 @@ module.exports = function (app) {
       
       }
       else {res.json({stockData: stockData[0]});}
-      
-      
+
     });
-  
-  
+
   });    
 };
